@@ -1,4 +1,5 @@
 // Body tube definitions
+
 BT_LABEL = 0;
 BT_INNER = 1;
 BT_OUTER = 2;
@@ -15,7 +16,9 @@ bt_tubes = [ bt_tmm, bt_bt5, bt_bt20, bt_bt50, bt_bt55, bt_bt60, bt_bt80 ];
 
 function bt_get(tube) = bt_tubes[search([tube], bt_tubes)[0]];
 
+
 module bt_bt(bt, h) {
+  color("Tan")
   difference() {
     cylinder(r=bt[BT_OUTER]/2, h=h);
     translate([0, 0, -1])

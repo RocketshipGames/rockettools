@@ -16,7 +16,7 @@ module nc_ellipsoid(bt, h, plug=-1, anchor=NC_ANCHOR_BAR, tol=0.25, wall=1) {
   union() {
     difference() {
       union() {
-        s_ellipsoid(h, bt_od);
+        s_ellipsoid(bt_od, h);
         translate([0, 0, -plug_h])
           cylinder(h=plug_h+1, d=plug_od);
       }
@@ -24,7 +24,7 @@ module nc_ellipsoid(bt, h, plug=-1, anchor=NC_ANCHOR_BAR, tol=0.25, wall=1) {
       union() {
         intersection() {
           translate([0, 0, -1])
-            s_ellipsoid(h, bt_od-2*wall);
+            s_ellipsoid(bt_od-2*wall, h);
           translate([0, 0, -2])
             cylinder(h=h+2, d=plug_id);
         }

@@ -1,4 +1,4 @@
-module s_ellipsoid(h, d) {
+module s_ellipsoid(d, h) {
   rotate_extrude() {
     intersection() {
       rotate([0, 0, 90])
@@ -17,12 +17,10 @@ module s_right_triangle(x, y, t) {
         polygon(points=[[0,0],[x,0],[0,y]]);
 }
 
-/*
-module hollow_cylinder(r_inner, r_outer, ht) {
+module s_hollow_cylinder(od, id, h) {
   difference() {
-    cylinder(r=r_outer, h=ht);;
+    cylinder(r=od/2, h=h);
     translate([0, 0, -1])
-      cylinder(r=r_inner, h=ht+2);
+      cylinder(r=id/2, h=h+2);
   }
 }
-*/
