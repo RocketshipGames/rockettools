@@ -1,10 +1,4 @@
-$fn=64;
-
-include <rockettools/bodytubes.scad>
-include <rockettools/nosecones.scad>
-include <rockettools/engines.scad>
-include <rockettools/shapes.scad>
-include <rockettools/units.scad>
+include <rockettools.scad>
 
 bt = bt_get("BT-5");
 eng = e_get("13mm");
