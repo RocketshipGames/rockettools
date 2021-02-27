@@ -41,11 +41,44 @@ module bt_coupler(bt, h=-1, wall=1.0, tol=0.25) {
   }
 }
 
+module bt_sleeve(bt, h=-1, wall=1.0, tol=0.25) {
+
+  ht = (h <= 0) ? floor(2*bt[BT_OUTER]) : h;
+  ir = bt[BT_OUTER]/2+tol;
+  or = ir+wall;
+  echo("Sleeve", bt=bt, id=ir*2, od=or*2, h=ht, wall=wall, tol=tol);
+
+  color("Peru")
+  difference() {
+    cylinder(r=or, h=ht);
+    translate([0, 0, -1])
+      cylinder(r=ir, h=ht+2);
+  }
+}
+
 module bt_plug(bt, h=-1, tol=0.25) {
   ht = (h <= 0) ? floor(2*bt[BT_OUTER]) : h;
   or = bt[BT_INNER]/2-tol;
   echo("Plug", bt=bt, od=or*2, h=ht, tol=tol);
   cylinder(r=or, h=ht);
+}
+
+module bt_ring(bt, it, h=-1, hook=false, tol=0.25) {
+  ht = (h <= 0) ? floor(bt[BT_OUTER]) : h;
+  or = bt[BT_INNER]/2-tol;
+  ir = it[BT_OUTER]/2+tol;
+  echo("Ring", bt=bt, it=it, od=or*2, id=ir*2, h=ht, hook=hook, tol=tol);
+  difference() {
+    difference() {
+      cylinder(r=or, h=ht);
+      translate([0, 0, -1])
+        cylinder(r=ir, h=ht+2);
+    }
+    if (hook) {
+      translate([ir-1, -2, -1])
+        cube([2, 4, ht+2]);
+    }
+  }
 }
 
 module bt_disc(bt, tol=0.25) {
@@ -54,10 +87,10 @@ module bt_disc(bt, tol=0.25) {
   circle(r=or);
 }
 
-module bt_ring(bt, it, hook=false, tol=0.25) {
+module bt_annulus(bt, it, hook=false, tol=0.25) {
   or = bt[BT_INNER]/2-tol;
   ir = it[BT_OUTER]/2+tol;
-  echo("Ring", bt=bt, it=it, od=or*2, id=ir*2, tol=tol);
+  echo("Annulus", bt=bt, it=it, od=or*2, id=ir*2, hook=hook, tol=tol);
   difference() {
     difference() {
       circle(r=or);
