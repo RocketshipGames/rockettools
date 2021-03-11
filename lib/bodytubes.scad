@@ -16,7 +16,7 @@ bt_tubes = [ bt_mm, bt_5, bt_20, bt_50, bt_55, bt_60, bt_80 ];
 
 function bt_get(tube) = bt_tubes[search([tube], bt_tubes)[0]];
 
-module bt_bt(bt, h) {
+module bt_bodytube(bt, h) {
   echo("Body Tube", bt=bt, h=h);
   color("Tan")
   difference() {

@@ -2,7 +2,10 @@ include <bodytubes.scad>
 include <shapes.scad>
 include <makerbeam.scad>
 
-module ll_conformal(bt, rod=25.4/16, h=-1, pad=4, wall=0.5, wall2=-1, sweep=45, tol=0.25, rod_tol=-1) {
+module ll_conformal(bt, rod=25.4/16, h=-1, pad=4, sweep=45,
+                    wall=0.5, wall2=-1,
+                    holes=0,
+                    tol=0.25, rod_tol=-1) {
 
   tol2 = (rod_tol < 0) ? tol : rod_tol;
 
@@ -18,34 +21,54 @@ module ll_conformal(bt, rod=25.4/16, h=-1, pad=4, wall=0.5, wall2=-1, sweep=45, 
   rri = rod/2 + tol2;
   rro = rri + w2;
 
-  cxi = cos(a)*ir-1;
-  cxo = or+rri*2+w2+1;
+  cxi = cos(a)*ir;
+  cxo = or+rri*2+w2;
   cl = cxo-cxi;
 
   cy = sin(a)*ir+1;
+
   cz = tan(sweep)*cl;
   cza = tan(sweep)*(cl-2);
 
-  ht = (h <= 0) ? cza+floor(bt[BT_OUTER]) : cza+h;
+  ht = (h <= 0) ? cz+floor(bt[BT_OUTER]) : cz+h;
+
+  hole = (holes==0) ? 0 : ((holes<0)?round(rod/4):holes/2);
+
+  hl_span = (ht-hole*4);
+  hl_count = (hole != 0) ? floor((hl_span-hole)/(hole*4)) : 0;
+  hl_truespan = hole*2 + hole*4*hl_count;
+  hl_shift = (ht-hl_truespan)/2;
 
   echo("Conformal Launch Lug", bt=bt, rod=rod, h=ht, pad=pad, wall=wall, wall2=w2,
-       sweep=sweep, sweep_l=cl-2, sweep_z=cza, tol=tol, tol2=tol2);
+       sweep=sweep, sweep_l=cl-2, sweep_z=cz,
+       hole=hole, hole_count=hl_count, hole_shift=hl_shift,
+       tol=tol, tol2=tol2);
 
-  // translate([-cxi-1, 0, 0])
-  difference() {
+  translate([-cxi, 0, 0])
+    difference() {
     union() {
-      intersection() {
-        translate([0, 0, -1])
-          linear_extrude(ht+2)
-          polygon([[0, 0], [x, y], [x, -y]]);
-
-        difference() {
-          cylinder(r=or, h=ht);
+      difference() {
+        intersection() {
           translate([0, 0, -1])
-            cylinder(r=ir, h=ht+2);
+            linear_extrude(ht+2)
+            polygon([[0, 0], [x, y], [x, -y]]);
+
+          difference() {
+            cylinder(r=or, h=ht);
+            translate([0, 0, -1])
+              cylinder(r=ir, h=ht+2);
+          }
         }
+
+        if (hole > 0 && hl_count > 0)
+          for (hl = [0 : hl_count]) {
+            translate([ir-1, 0, hl_shift+hl*(hole*4)])
+              rotate([0, 90, 0])
+              cylinder(r=hole, h=wall+2);
+          }
       }
 
+      difference() {
       difference() {
         difference() {
           union() {
@@ -65,13 +88,14 @@ module ll_conformal(bt, rod=25.4/16, h=-1, pad=4, wall=0.5, wall2=-1, sweep=45, 
           }
         }
       }
-    }
-
-    if (sweep && cz)
+          #if (sweep && cz)
       translate([0, cy, 0])
         rotate([90, 0, 0])
         linear_extrude(cy*2)
         polygon([[cxi, ht+1], [cxi, ht], [cxo, ht-cz], [cxo, ht+1]]);
+
+      }
+    }
   }
 
 }
