@@ -1,13 +1,38 @@
 include <shapes.scad>
 include <bodytubes.scad>
 
-NC_ELLIPSOID    = "ellipsoid";
-NC_POWER_SERIES = "power-series";
+NC_CONIC         = "conic";
+NC_BICONIC       = "biconic";
+NC_ELLIPSOID     = "ellipsoid";
+NC_PARABOLIC     = "parabolic";
+NC_POWER_SERIES  = "power-series";
+NC_TANGENT_OGIVE = "tangent-ogive";
 
-NC_ANCHOR_NONE = 0;
-NC_ANCHOR_BAR = 1;
+NC_ANCHOR_NONE  = "none";
+NC_ANCHOR_SOLID = "solid";
+NC_ANCHOR_BAR   = "bar";
 
-module nc_nosecone(type, bt, h, plug=-1, anchor=NC_ANCHOR_BAR, power=0.25, tol=0.125, wall=1) {
+module nc_anchor(type, od, id, plug, bar=3) {
+  if (type == NC_ANCHOR_BAR) {
+    translate([0, 0, bar/2-plug])
+      union() {
+      rotate([0, 90, 0])
+        cylinder(h=(od+id)/2, d=bar, center=true);
+      translate([0, 0, -bar/4])
+        cube([(od+id)/2, bar, bar/2], center=true);
+    }
+  }
+}
+
+module nc_nosecone(type, bt, h,
+                   power=0.25,                  // Power series parameters
+                   d2=-1, h2=-1,                // Biconic parameters
+                   k=1,                         // Parabolic parameters
+                   anchor=NC_ANCHOR_BAR, bar=3,
+                   plug=-1,
+                   wall=1,
+                   tol=0.125) {
+
   bt_id = bt[BT_INNER];
   bt_od = bt[BT_OUTER];
 
@@ -17,36 +42,63 @@ module nc_nosecone(type, bt, h, plug=-1, anchor=NC_ANCHOR_BAR, power=0.25, tol=0
 
   anchor_type = (wall > 0) ? anchor : NC_ANCHOR_NONE;
 
+  // Values for biconic
+  d2_ = (d2 <= 0) ? 2*bt_od/3 : d2;
+  h2_ = (h2 <= 0) ? 2*h/3 : h2;
+
+  // Generate
   echo("Nosecone", type=type, bt=bt, h=h, plug=plug_h, anchor=anchor_type);
 
-
   difference() {
-  #union() {
-    if (type == NC_ELLIPSOID) {
-      s_ellipsoid(bt_od, h);
-    } else if (type == NC_POWER_SERIES) {
-      s_power_series(bt_od, h, power);
-    }
-    translate([0, 0, -plug_h])
-      cylinder(d=plug_od, h=plug_h);
-  }
-
-      union() {
-      translate([0, 0, -(plug_h+1)])
-        cylinder(d=plug_id, h=plug_h+2);
-
-      intersection() {
-        if (type == NC_ELLIPSOID) {
-          s_ellipsoid(bt_od-wall*2, h-wall);
-        } else if (type == NC_POWER_SERIES) {
-          s_power_series(bt_od-wall*2, h-wall, power);
-        }
-        translate([0, 0, -1])
-          cylinder(d=plug_id, h=h+1.01);
+    union() {
+      if (type == NC_ELLIPSOID) {
+        s_ellipsoid(bt_od, h);
+      } else if (type == NC_CONIC) {
+        cylinder(d1=bt_od, d2=0, h=h);
+      } else if (type == NC_BICONIC) {
+          translate([0, 0, h2_])
+            cylinder(d1=d2_, d2=0, h=h-h2_);
+        cylinder(d1=bt_od, d2=d2_, h=h2_);
+      } else if (type == NC_POWER_SERIES) {
+        s_power_series(bt_od, h, power);
+      } else if (type == NC_TANGENT_OGIVE) {
+        s_tangent_ogive(bt_od, h);
+      } else if (type == NC_PARABOLIC) {
+        s_parabolic(bt_od, h, k);
       }
+
+      translate([0, 0, -plug_h])
+        cylinder(d=plug_od, h=plug_h);
     }
+
+    if (wall > 0)
+      union() {
+        if (anchor_type != NC_ANCHOR_SOLID)
+          translate([0, 0, -(plug_h+1)])
+            cylinder(d=plug_id, h=plug_h+2);
+
+        intersection() {
+          if (type == NC_ELLIPSOID) {
+            s_ellipsoid(bt_od-wall*2, h-wall);
+          } else if (type == NC_CONIC) {
+            cylinder(d1=bt_od-wall*2, d2=0, h=h-wall);
+          } else if (type == NC_BICONIC) {
+            translate([0, 0, h2_-wall])
+              cylinder(d1=d2_-wall*2, d2=0, h=h-h2_-wall);
+            cylinder(d1=bt_od-wall*2, d2=d2_-wall*2, h=h2_-wall);
+          } else if (type == NC_POWER_SERIES) {
+            s_power_series(bt_od-wall*2, h-wall, power);
+          } else if (type == NC_TANGENT_OGIVE) {
+            s_tangent_ogive(bt_od-wall*2, h-wall);
+          } else if (type == NC_PARABOLIC) {
+            s_parabolic(bt_od-wall*2, h-wall, k);
+          }
+          translate([0, 0, -1])
+            cylinder(d=plug_id, h=h+1.01);
+        }
+      }
   }
-  nc_anchor(anchor_type, plug_od, plug_id, plug_h);
+  nc_anchor(anchor_type, plug_od, plug_id, plug_h, bar=bar);
 
 }
 
@@ -146,16 +198,4 @@ module nc_power(bt, h, shape, f=100, plug=-1, anchor=NC_ANCHOR_BAR, tol=0.25, wa
   nc_anchor(plug_od, plug_id, plug_h, anchor);
 
   // end nc_power
-}
-
-module nc_anchor(type, od, id, plug) {
-  if (type == NC_ANCHOR_BAR) {
-    translate([0, 0, 1.5-plug])
-      union() {
-      rotate([0, 90, 0])
-        cylinder(h=(od+id)/2, d=3, center=true);
-      translate([0, 0, -0.75])
-        cube([(od+id)/2, 3, 1.5], center=true);
-    }
-  }
 }
