@@ -7,6 +7,7 @@ NC_ELLIPSOID     = "ellipsoid";
 NC_PARABOLIC     = "parabolic";
 NC_POWER_SERIES  = "power-series";
 NC_TANGENT_OGIVE = "tangent-ogive";
+NC_BLUNTED_CONIC = "blunted-conic";
 
 NC_ANCHOR_NONE  = "none";
 NC_ANCHOR_SOLID = "solid";
@@ -28,6 +29,7 @@ module nc_nosecone(type, bt, h,
                    power=0.25,                  // Power series parameters
                    d2=-1, h2=-1,                // Biconic parameters
                    k=1,                         // Parabolic parameters
+                   b=-1,                         // Blunted conic parameters
                    anchor=NC_ANCHOR_BAR, bar=3,
                    plug=-1,
                    wall=1,
@@ -45,6 +47,9 @@ module nc_nosecone(type, bt, h,
   // Values for biconic
   d2_ = (d2 <= 0) ? 2*bt_od/3 : d2;
   h2_ = (h2 <= 0) ? 2*h/3 : h2;
+
+  // Values for blunted conic
+  b_ = (b > 0) ? b : bt_od/3;
 
   // Generate
   echo("Nosecone", type=type, bt=bt, h=h, plug=plug_h, anchor=anchor_type);
@@ -65,6 +70,8 @@ module nc_nosecone(type, bt, h,
         s_tangent_ogive(bt_od, h);
       } else if (type == NC_PARABOLIC) {
         s_parabolic(bt_od, h, k);
+      } else if (type == NC_BLUNTED_CONIC) {
+        s_blunted_conic(bt_od, h, b_);
       }
 
       translate([0, 0, -plug_h])
@@ -92,6 +99,8 @@ module nc_nosecone(type, bt, h,
             s_tangent_ogive(bt_od-wall*2, h-wall);
           } else if (type == NC_PARABOLIC) {
             s_parabolic(bt_od-wall*2, h-wall, k);
+          } else if (type == NC_BLUNTED_CONIC) {
+            s_blunted_conic(bt_od-wall*2, h-wall, b_);
           }
           translate([0, 0, -1])
             cylinder(d=plug_id, h=h+1.01);
