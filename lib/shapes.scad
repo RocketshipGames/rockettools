@@ -1,3 +1,5 @@
+TORAD = PI/180;
+TODEG = 180/PI;
 
 module s_right_triangle(t) {
   x = t[0];
@@ -33,7 +35,7 @@ module s_ellipsoid(d, h) {
 
 // Power Series revolution
 // Implementation adapted from Garrett Goss' Nosecone SCAD library
-// https://www.thingiverse.com/thing:2004511/remixes
+// https://www.thingiverse.com/thing:2004511
 //
 // Formula: y = R * pow((x / L), n) for 0 <= n <= 1
 //
@@ -44,7 +46,7 @@ module s_ellipsoid(d, h) {
 // power = 0 for a cylinder
 //
 // f = approximation facets
-module s_power_series(d, h, power, f=100) {
+module s_power_series(d, h, power, f=$fn) {
   inc = 1/f;
   rotate_extrude()
     for (i = [1 : f]) {
@@ -61,11 +63,11 @@ module s_power_series(d, h, power, f=100) {
 
 // Tangent Ogive revolution
 // Implementation adapted from Garrett Goss' Nosecone SCAD library
-// https://www.thingiverse.com/thing:2004511/remixes
+// https://www.thingiverse.com/thing:2004511
 //
 // Parameters:
 // f = approximation facets
-module s_tangent_ogive(d, h, f=100) {
+module s_tangent_ogive(d, h, f=$fn) {
   inc = 1/f;
 
   r = d/2;
@@ -88,18 +90,18 @@ module s_tangent_ogive(d, h, f=100) {
 
 // Parabolic revolution
 // Implementation adapted from Garrett Goss' Nosecone SCAD library
-// https://www.thingiverse.com/thing:2004511/remixes
+// https://www.thingiverse.com/thing:2004511
 //
 // Formula: y = R * ((2 * (x / L)) - (K * pow((x / L),2)) / (2 - K);
 //
 // Parameters:
-// K = 0 for cone
-// K = 0.5 for 1/2 parabola
-// K = 0.75 for 3/4 parabola
-// K = 1 for full parabola
+// k = 0 for cone
+// k = 0.5 for 1/2 parabola
+// k = 0.75 for 3/4 parabola
+// k = 1 for full parabola
 //
 // f = approximation facets
-module s_parabolic(d, h, k, f=100) {
+module s_parabolic(d, h, k, f=$fn) {
   inc = 1/f;
   r = d/2;
 
@@ -119,9 +121,13 @@ module s_parabolic(d, h, k, f=100) {
 
 // Blunted Conic revolution
 // Implementation adapted from Garrett Goss' Nosecone SCAD library
-// https://www.thingiverse.com/thing:2004511/remixes
+// https://www.thingiverse.com/thing:2004511
 //
-module s_blunted_conic(d, h, b, f=100) {
+// Parameters:
+// b = diameter of the tip sphere
+//
+// f = approximation facets
+module s_blunted_conic(d, h, b, f=$fn) {
   inc = 1/f;
   r = d/2;
   r_nose = b/2;
@@ -130,9 +136,6 @@ module s_blunted_conic(d, h, b, f=100) {
   y_t = x_t * (r/h);
   x_o = x_t + sqrt(pow(r_nose, 2) - pow(y_t, 2));
   x_a = x_o - r_nose;
-
-  TORAD = PI/180;
-  TODEG = 180/PI;
 
   f_x_t = round((f * x_t) / h);
 
@@ -152,6 +155,123 @@ module s_blunted_conic(d, h, b, f=100) {
       }
 
       translate([0, h-x_o, 0])
+        difference() {
+          circle(r_nose);
+          translate([-r_nose, 0, 0])
+            square((2 * r_nose), center=true);
+        }
+    }
+
+}
+
+// Sears-Haack revolution
+// Implementation adapted from Garrett Goss' Nosecone SCAD library
+// https://www.thingiverse.com/thing:2004511
+//
+// Formulae (radians):
+// theta = acos(1 - (2 * x / L));
+// y = (R / sqrt(PI)) * sqrt(theta - (sin(2 * theta) / 2) + C * pow(sin(theta),3));
+//
+// Parameters:
+// c = 1/3: LV-Haack (minimizes supersonic drag for a given L & V)
+// c = 0: LD-Haack (minimizes supersonic drag for a given L & D), also referred to as Von Kármán
+//
+// f = approximation facets
+module s_haack(d, h, c=0, f=$fn) {
+  inc = 1/f;
+  r = d/2;
+
+  rotate_extrude()
+    for (i = [1 : f]){
+      x_last = h * (i - 1) * inc;
+      x = h * i * inc;
+
+      theta_last = TORAD * acos((1 - (2 * x_last/h)));
+      y_last = (r/sqrt(PI)) * sqrt(theta_last - (sin(TODEG * (2*theta_last))/2) + c * pow(sin(TODEG * theta_last), 3));
+
+      theta = TORAD * acos(1 - (2 * x/h));
+      y = (r/sqrt(PI)) * sqrt(theta - (sin(TODEG * (2 * theta)) / 2) + c * pow(sin(TODEG * theta), 3));
+
+      rotate([0, 0, -90])
+        polygon(points = [[x_last - h, 0], [x - h, 0], [x - h, y], [x_last - h, y_last]]);
+    }
+
+}
+
+// Secant Ogive revolution
+// Implementation adapted from Garrett Goss' Nosecone SCAD library
+// https://www.thingiverse.com/thing:2004511
+//
+// Formulae (radians):
+// alpha = TORAD * atan(R/L) - TORAD * acos(sqrt(pow(L,2) + pow(R,2)) / (2 * rho));
+// y = sqrt(pow(rho,2) - pow((rho * cos(TODEG * alpha) - x),2)) + (rho * sin(TODEG * alpha));
+//
+// Parameters:
+// For a bulging cone (e.g. Honest John): L/2 < rho < (R^2 + L^2)/(2R)
+// Otherwise: rho > (R^2 + L^2)/(2R)
+//
+// f = approximation facets
+module s_secant_ogive(d, h, rho, f=$fn) {
+  inc = 1/f;
+  r = d/2;
+
+  alpha = TORAD * atan(r/h) - TORAD * acos(sqrt(pow(h,2) + pow(r,2)) / (2*rho));
+
+  rotate_extrude()
+    for (i = [1 : f]) {
+
+      x_last = h * (i - 1) * inc;
+      x = h * i * inc;
+
+      y_last = sqrt(pow(rho,2) - pow((rho * cos(TODEG*alpha) - x_last), 2)) + (rho * sin(TODEG*alpha));
+
+      y = sqrt(pow(rho,2) - pow((rho * cos(TODEG*alpha) - x), 2)) + (rho * sin(TODEG*alpha));
+
+      rotate([0, 0, -90])
+        polygon(points = [[x_last - h, 0], [x - h, 0], [x - h, y], [x_last - h, y_last]]);
+    }
+}
+
+// Blunted Tangent Ogive revolution
+// Implementation adapted from Garrett Goss' Nosecone SCAD library
+// https://www.thingiverse.com/thing:2004511
+//
+// Parameters:
+// b = diameter of the tip sphere
+//
+// f = approximation facets
+module s_blunted_tangent_ogive(d, h, b, f=$fn) {
+  inc = 1/f;
+  r = d/2;
+  r_nose = b/2;
+
+  rho = (pow(r,2) + pow(h,2)) / (2*r);
+
+  x_o = h - sqrt(pow((rho - r_nose), 2) - pow((rho - r), 2));
+  x_a = x_o - r_nose;
+  y_t = (r_nose * (rho - r)) / (rho - r_nose);
+  x_t = x_o - sqrt(pow(r_nose, 2)- pow(y_t, 2));
+
+  s_x_t = round((f * x_t) / h);
+
+  alpha = TORAD * atan(r/h) - TORAD * acos(sqrt(pow(h,2) + pow(r,2)) / (2*rho));
+
+  rotate_extrude()
+    union() {
+      for (i=[s_x_t:f]) {
+
+        x_last = h * (i - 1) * inc;
+        x = h * i * inc;
+
+        y_last = sqrt(pow(rho,2) - pow((rho * cos(TODEG * alpha) - x_last),2)) + (rho * sin(TODEG * alpha));
+
+        y = sqrt(pow(rho,2) - pow((rho * cos(TODEG * alpha) - x),2)) + (rho * sin(TODEG * alpha));
+
+        rotate([0,0,-90])
+          polygon(points = [[x_last-h,0],[x-h,0],[x-h,y],[x_last-h,y_last]]);
+      }
+
+      translate([0, h - x_o, 0])
         difference() {
           circle(r_nose);
           translate([-r_nose, 0, 0])
