@@ -1,5 +1,5 @@
 
-$fn = $preview ? 20 : 60;
+$fn = $preview ? 30 : 120;
 
 include <lib/units.scad>
 include <lib/shapes.scad>

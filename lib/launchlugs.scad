@@ -1,57 +1,83 @@
 include <bodytubes.scad>
 include <shapes.scad>
-include <makerbeam.scad>
 
-module ll_conformal(bt, rod=25.4/16, h=-1, pad=4, sweep=45,
-                    wall=0.5, wall2=-1,
-                    holes=0,
-                    tol=0.25, rod_tol=-1) {
+module ll_conformal(bt, rod, h=10, wall=0.5, tol=0.25) {
 
-  tol2 = (rod_tol < 0) ? tol : rod_tol;
+  pad_ir = bt[BT_OUTER]/2 + tol;        // Inner radius of the pad segment
+  pad_or = pad_ir + wall;                   // Outer radius of the pad segment
 
-  ir = bt[BT_OUTER]/2+tol;
-  or = ir+wall;
-  w2 = (wall2 <= 0) ? wall : wall2;
+  guide_ir = rod/2 + tol;               // Inner radius of the guide
+  guide_or = guide_ir + wall;           // Outer radius of the guide
 
-  a = 360*(pad/2)/(2*PI*ir);
-  x = cos(a)*ir*2;
+  echo("Conformal Launch Lug", bt=bt, rod=rod, h=h, wall=wall, tol=tol,
+       guide=[guide_ir*2, guide_or*2]);
+
+  union() {
+    // Cut the body tube sleeve down to make the pad arc segment
+    intersection() {
+      translate([pad_ir-1, -guide_or, -1])
+        cube([pad_or-pad_ir+2, guide_or*2, h+2]);
+
+      difference() {
+        cylinder(r=pad_or, h=h);
+        translate([0, 0, -1])
+          cylinder(r=pad_ir, h=h+2);
+      }
+    }
+
+
+    // Drill the hole through the guide
+    difference() {
+      // Positive guide shape
+      union() {
+        translate([pad_ir, -guide_or, 0])
+          cube([guide_ir+wall, guide_or*2, h]);
+
+            translate([pad_or+guide_ir, 0, 0])
+              cylinder(r=guide_or, h=h);
+          }
+
+          // Negative guide shape
+          union() {
+            *translate([pad_ir-1, -guide_ir, -1])
+              cube([guide_ir+wall+1, guide_ir*2, h+2]);
+
+            #translate([pad_or+guide_ir, 0, -1])
+              cylinder(r=guide_ir, h=h+2);
+          }
+        }
+  }
+}
+
+module ll_padded(bt, rod, h=10, pad=4, wall=0.5, wall2=-1, tol=0.25, rod_tol=-1) {
+
+  tol2 = (rod_tol < 0) ? tol : rod_tol; // Tolerance for the rod shaft
+  w2 = (wall2 <= 0) ? wall : wall2;     // Thickness of the guide wall (vs pad)
+
+  ir = bt[BT_OUTER]/2+tol;    // Inner radius of the pad segment
+  or = ir+wall;               // Outer radius of the pad segment
+
+  a = 360*(pad/2)/(2*PI*ir);  // Angle arc of the pad
+  x = cos(a)*ir*2;            // Point of the bounding triangle for pad
   y = sin(a)*ir*2;
-  echo(a=a);
 
-  rri = rod/2 + tol2;
-  rro = rri + w2;
+  rri = rod/2 + tol2;         // Inner radius of the guide
+  rro = rri + w2;             // Outer radius of the guide
 
-  cxi = cos(a)*ir;
-  cxo = or+rri*2+w2;
-  cl = cxo-cxi;
+  cxi = cos(a)*ir;            // Inner point of the pad
 
-  cy = sin(a)*ir+1;
-
-  cz = tan(sweep)*cl;
-  cza = tan(sweep)*(cl-2);
-
-  ht = (h <= 0) ? cz+floor(bt[BT_OUTER]) : cz+h;
-
-  hole = (holes==0) ? 0 : ((holes<0)?round(rod/4):holes/2);
-
-  hl_span = (ht-hole*4);
-  hl_count = (hole != 0) ? floor((hl_span-hole)/(hole*4)) : 0;
-  hl_truespan = hole*2 + hole*4*hl_count;
-  hl_shift = (ht-hl_truespan)/2;
+  ht = h;
 
   echo("Conformal Launch Lug", bt=bt, rod=rod, h=ht, pad=pad, wall=wall, wall2=w2,
-       sweep=sweep, sweep_l=cl-2, sweep_z=cz,
-       hole=hole, hole_count=hl_count, hole_shift=hl_shift,
        tol=tol, tol2=tol2);
 
   translate([-cxi, 0, 0])
-    difference() {
-    union() {
-      difference() {
+      union() {
+        // Cut the body tube sleeve down to make the pad arc segment
         intersection() {
           translate([0, 0, -1])
             linear_extrude(ht+2)
-            polygon([[0, 0], [x, y], [x, -y]]);
+              polygon([[0, 0], [x, y], [x, -y]]);
 
           difference() {
             cylinder(r=or, h=ht);
@@ -60,17 +86,10 @@ module ll_conformal(bt, rod=25.4/16, h=-1, pad=4, sweep=45,
           }
         }
 
-        if (hole > 0 && hl_count > 0)
-          for (hl = [0 : hl_count]) {
-            translate([ir-1, 0, hl_shift+hl*(hole*4)])
-              rotate([0, 90, 0])
-              cylinder(r=hole, h=wall+2);
-          }
-      }
 
-      difference() {
-      difference() {
+        // Drill the hole through the guide
         difference() {
+          // Positive guide shape
           union() {
             translate([ir, -rro, 0])
               cube([rri+wall, rro*2, ht]);
@@ -79,6 +98,7 @@ module ll_conformal(bt, rod=25.4/16, h=-1, pad=4, sweep=45,
               cylinder(r=rro, h=ht);
           }
 
+          // Negative guide shape
           union() {
             translate([ir-1, -rri, -1])
               cube([rri+wall+1, rri*2, ht+2]);
@@ -87,69 +107,5 @@ module ll_conformal(bt, rod=25.4/16, h=-1, pad=4, sweep=45,
               cylinder(r=rri, h=ht+2);
           }
         }
-      }
-          #if (sweep && cz)
-      translate([0, cy, 0])
-        rotate([90, 0, 0])
-        linear_extrude(cy*2)
-        polygon([[cxi, ht+1], [cxi, ht], [cxo, ht-cz], [cxo, ht+1]]);
-
-      }
-    }
   }
-
-}
-
-module ll_makerbeam(bt, h=-1, pad=4, wall=0.5, sweep=45, stem=1, tol=0.25) {
-
-  ir = bt[BT_OUTER]/2+tol;
-  or = ir+wall;
-
-  a = 360*(pad/2)/(2*PI*ir);
-  x = cos(a)*ir*2;
-  y = sin(a)*ir*2;
-  echo(a=a);
-
-  st = stem+wall;
-
-  cxi = cos(a)*ir-1;
-  cxo = or+stem+2.8+1;
-  cl = cxo-cxi;
-
-  cy = sin(a)*ir+1;
-  cz = tan(sweep)*cl;
-  cza = tan(sweep)*(cl-2);
-
-  ht = (h <= 0) ? cza+floor(bt[BT_OUTER]) : cza+h;
-
-  echo("Conformal MakerBeam Button", bt=bt, h=ht, pad=pad, wall=wall,
-       sweep=sweep, sweep_l=cl-2, sweep_z=cza, tol=tol);
-
-  translate([-cxi-1, 0, 0])
-  difference() {
-    union() {
-      intersection() {
-        translate([0, 0, -1])
-          linear_extrude(ht+2)
-          polygon([[0, 0], [x, y], [x, -y]]);
-
-        difference() {
-          cylinder(r=or, h=ht);
-          translate([0, 0, -1])
-            cylinder(r=ir, h=ht+2);
-        }
-      }
-
-      translate([(ir+or)/2+st, 0, 0])
-        rotate([0, 0, 90])
-        mb_button(st, ht);
-    }
-
-    if (sweep && cz)
-      translate([0, cy, 0])
-        rotate([90, 0, 0])
-        linear_extrude(cy*2)
-        polygon([[cxi, ht+1], [cxi, ht], [cxo, ht-cz], [cxo, ht+1]]);
-  }
-
 }

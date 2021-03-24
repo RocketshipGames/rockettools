@@ -59,6 +59,11 @@ module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2) {
   }
 }
 
+function nc_plug(bt, wall_d=1, tol=0.25) =
+  let (plug_od = bt[BT_INNER] - 2*tol,
+       plug_id = plug_od - 2*wall_d)
+  [bt[BT_LABEL] + " Plug", plug_id, plug_od];
+
 module nc_nosecone(type, bt, h,
                    b=-1,               // Blunted Conic and Blunted Tangent Ogive parameters
                    d2=-1, h2=-1,       // Biconic parameters
@@ -69,7 +74,7 @@ module nc_nosecone(type, bt, h,
                    anchor=NC_ANCHOR_BAR, bar=3, tab=[3, 3, 3], buffer=2, hole=2,
                    plug=-1,
                    wall=1,
-                   tol=0.125) {
+                   tol=0.25) {
 
   bt_id = bt[BT_INNER];
   bt_od = bt[BT_OUTER];
@@ -78,8 +83,9 @@ module nc_nosecone(type, bt, h,
   anchor_type = (wall_d > 0) ? anchor : NC_ANCHOR_SOLID;
 
   plug_h = (plug==-1) ? floor(bt_od/2) : plug;
-  plug_od = bt_id - 2*tol;
-  plug_id = plug_od - 2*wall_d;
+  plug_bt = nc_plug(bt, wall_d, tol);
+  plug_id = plug_bt[BT_INNER];
+  plug_od = plug_bt[BT_OUTER];
 
   // Values for biconic
   d2_ = (d2 <= 0) ? 2*bt_od/3 : d2;
@@ -92,7 +98,9 @@ module nc_nosecone(type, bt, h,
   rho_ = (rho < 0) ? ((h/2)+((pow(bt_od/2, 2)+pow(h, 2))/bt_od))/2 : rho;
 
   // Generate
-  echo("Nosecone", type=type, bt=bt, h=h, plug=plug_h, anchor=anchor_type, wall=wall_d);
+  echo("Nosecone", type=type, bt=bt, h=h,
+       plug=plug_h, plug_od=plug_od, plug_id=plug_id,
+       anchor=anchor_type, wall=wall_d);
 
   difference() {
 
