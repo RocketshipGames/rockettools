@@ -3,13 +3,13 @@ include <bodytubes.scad>
 
 NC_CONIC                 = "conic";
 NC_BICONIC               = "biconic";
-NC_BLUNTED_CONIC         = "blunted-conic";
+NC_BLUNTED_CONIC         = "blunt-conic";
 NC_ELLIPSOID             = "ellipsoid";
 NC_PARABOLIC             = "parabolic";
-NC_POWER_SERIES          = "power-series";
-NC_TANGENT_OGIVE         = "tangent-ogive";
-NC_BLUNTED_TANGENT_OGIVE = "blunted-tangent-ogive";
-NC_SECANT_OGIVE          = "secant-ogive";
+NC_POWER_SERIES          = "pow-series";
+NC_TANGENT_OGIVE         = "tan-ogive";
+NC_BLUNTED_TANGENT_OGIVE = "blunt-tan-ogive";
+NC_SECANT_OGIVE          = "sec-ogive";
 NC_HAACK                 = "haack";
 
 NC_ANCHOR_NONE     = "none";
@@ -68,7 +68,7 @@ module nc_nosecone(type, bt, h,
                    b=-1,               // Blunted Conic and Blunted Tangent Ogive parameters
                    d2=-1, h2=-1,       // Biconic parameters
                    power=0.25,         // Power Series parameters
-                   k=1,                // Parabolic parameters
+                   k=0.75,             // Parabolic parameters
                    c=0,                // Sears-Haack parameters
                    rho=-1,             // Secant Ogive parameters
                    anchor=NC_ANCHOR_BAR, bar=3, tab=[3, 3, 3], buffer=2, hole=2,

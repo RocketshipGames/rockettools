@@ -120,47 +120,31 @@ module s_parabolic(d, h, k, f=$fn) {
 }
 
 // Blunted Conic revolution
-// Implementation adapted from Garrett Goss' Nosecone SCAD library
-// https://www.thingiverse.com/thing:2004511
 //
 // Parameters:
 // b = diameter of the tip sphere
 //
 // f = approximation facets
 module s_blunted_conic(d, h, b, f=$fn) {
+
   inc = 1/f;
   r = d/2;
   r_nose = b/2;
 
   x_t = (pow(h, 2) / r) * sqrt(pow(r_nose, 2) / (pow(r, 2) + pow(h, 2)));
-  y_t = x_t * (r/h);
+  y_t = x_t * r / h;
+
   x_o = x_t + sqrt(pow(r_nose, 2) - pow(y_t, 2));
-  x_a = x_o - r_nose;
 
-  f_x_t = round((f * x_t) / h);
-
-  rotate_extrude()
-    union() {
-      for (i = [f_x_t : f]){
-
-        x_last = h * (i - 1) * inc;
-        x = h * i * inc;
-
-        y_last = x_last * (r/h);
-
-        y = x * (r / h);
-
-        rotate([0, 0, -90])
-          polygon(points = [[x_last - h, 0], [x - h, 0], [x - h, y], [x_last - h, y_last]]);
-      }
-
-      translate([0, h-x_o, 0])
-        difference() {
-          circle(r_nose);
-          translate([-r_nose, 0, 0])
-            square((2 * r_nose), center=true);
-        }
+  union() {
+    difference() {
+      cylinder(d1=d, d2=0, h=h);
+      translate([-d/2, -d/2, h-x_t])
+        cube([d, d, x_t+1]);
     }
+    translate([0, 0, h-x_o])
+      sphere(d=b);
+  }
 
 }
 
@@ -233,50 +217,30 @@ module s_secant_ogive(d, h, rho, f=$fn) {
 }
 
 // Blunted Tangent Ogive revolution
-// Implementation adapted from Garrett Goss' Nosecone SCAD library
-// https://www.thingiverse.com/thing:2004511
 //
 // Parameters:
 // b = diameter of the tip sphere
 //
 // f = approximation facets
 module s_blunted_tangent_ogive(d, h, b, f=$fn) {
-  inc = 1/f;
+
   r = d/2;
   r_nose = b/2;
 
   rho = (pow(r,2) + pow(h,2)) / (2*r);
 
   x_o = h - sqrt(pow((rho - r_nose), 2) - pow((rho - r), 2));
-  x_a = x_o - r_nose;
   y_t = (r_nose * (rho - r)) / (rho - r_nose);
-  x_t = x_o - sqrt(pow(r_nose, 2)- pow(y_t, 2));
+  x_t = x_o - sqrt(pow(r_nose, 2) - pow(y_t, 2));
 
-  s_x_t = round((f * x_t) / h);
-
-  alpha = TORAD * atan(r/h) - TORAD * acos(sqrt(pow(h,2) + pow(r,2)) / (2*rho));
-
-  rotate_extrude()
-    union() {
-      for (i=[s_x_t:f]) {
-
-        x_last = h * (i - 1) * inc;
-        x = h * i * inc;
-
-        y_last = sqrt(pow(rho,2) - pow((rho * cos(TODEG * alpha) - x_last),2)) + (rho * sin(TODEG * alpha));
-
-        y = sqrt(pow(rho,2) - pow((rho * cos(TODEG * alpha) - x),2)) + (rho * sin(TODEG * alpha));
-
-        rotate([0,0,-90])
-          polygon(points = [[x_last-h,0],[x-h,0],[x-h,y],[x_last-h,y_last]]);
-      }
-
-      translate([0, h - x_o, 0])
-        difference() {
-          circle(r_nose);
-          translate([-r_nose, 0, 0])
-            square((2 * r_nose), center=true);
-        }
+  union() {
+    difference() {
+      s_tangent_ogive(d, h, f=$fn);
+      translate([-d/2, -d/2, h-x_t])
+        cube([d, d, x_t+1]);
     }
+    translate([0, 0, h-x_o])
+      sphere(d=b);
+  }
 
 }
