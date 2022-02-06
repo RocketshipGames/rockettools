@@ -4,17 +4,20 @@ BT_LABEL = 0;
 BT_INNER = 1;
 BT_OUTER = 2;
 
-//       Name     Inner  Outer      Difference
-bt_mm = [ "T-MM",   6.45,  7.16 ]; // 0.71
-bt_5  = [ "BT-5",  13.2,  13.8  ]; // 0.6
-bt_20 = [ "BT-20", 18.0,  18.7  ]; // 0.7
-bt_50 = [ "BT-50", 24.1,  24.8  ]; // 0.7
-bt_55 = [ "BT-55", 32.6,  33.7  ]; // 1.1
-bt_60 = [ "BT-60", 40.5,  41.6  ]; // 1.1
-bt_80 = [ "BT-80", 65.7,  66.0  ]; // 0.3?
+//         Name      Inner   Outer      Difference
+bt_mm  = [ "T-MM",     6.45,   7.16 ]; // 0.71
+bt_5   = [ "BT-5",    13.2,   13.8  ]; // 0.6
+bt_20  = [ "BT-20",   18.0,   18.7  ]; // 0.7
+bt_50  = [ "BT-50",   24.1,   24.8  ]; // 0.7
+bt_55  = [ "BT-55",   32.6,   33.7  ]; // 1.1
+bt_60  = [ "BT-60",   40.5,   41.6  ]; // 1.1
+bt_1d9 = [ "BT-1.9",  45.72,  48.0  ]; // 2.28
+bt_80  = [ "BT-80",   65.7,   66.0  ]; // 0.3?
 bt_tubes = [ bt_mm, bt_5, bt_20, bt_50, bt_55, bt_60, bt_80 ];
 
 function bt_get(tube) = bt_tubes[search([tube], bt_tubes)[0]];
+
+function bt_wall(tube) = tube[BT_OUTER] - tube[BT_INNER];
 
 module bt_bodytube(bt, h) {
   echo("Body Tube", bt=bt, h=h);

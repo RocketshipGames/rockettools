@@ -73,7 +73,6 @@ module s_tangent_ogive(d, h, f=$fn) {
   r = d/2;
   rho = (pow(r, 2) + pow(h, 2)) / d;
 
-
   rotate_extrude()
     for (i = [1 : f]){
       x_last = h * (i - 1) * inc;
@@ -242,5 +241,52 @@ module s_blunted_tangent_ogive(d, h, b, f=$fn) {
     translate([0, 0, h-x_o])
       sphere(d=b);
   }
+
+}
+
+module s_blunted_secant_ogive(d, h, rho, b, f=$fn) {
+
+  r = d/2;
+  br = b/2;
+
+  l = sqrt(r*r + h*h);
+
+  dx = h/l;
+  dy = r/l;
+
+  mx = h/2;
+  my = r/2;
+
+  k = sqrt(pow(rho, 2) - pow(l/2, 2));
+
+  cx = mx+dy*k;
+  cy = my-dx*k;
+
+  alpha = TORAD * atan(r/h) - TORAD * acos(sqrt(pow(h,2) + pow(r,2)) / (2*rho));
+
+  rx = rho*cos(TODEG*alpha) - sqrt(rho*rho - pow(br - rho*sin(TODEG*alpha), 2));
+  ry = br;
+
+  run = cx-rx;
+  rise = cy-ry;
+  dl = sqrt(run*run + rise*rise);
+  dtx = run/dl;
+  dty = rise/dl;
+
+  t = -ry/(dty);
+  zx = rx + dtx*t;
+
+  kd = sqrt(pow(zx-rx, 2) + pow(0-ry, 2)) * 2;
+
+  difference() {
+    s_secant_ogive(d, h, rho);
+
+    translate([0, 0, h-rx])
+      linear_extrude(rx+1)
+      square([d+2, d+2], center=true);
+  }
+
+  translate([0, 0, h-zx])
+    sphere(d=kd);
 
 }

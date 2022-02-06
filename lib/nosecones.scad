@@ -9,6 +9,7 @@ NC_PARABOLIC             = "parabolic";
 NC_POWER_SERIES          = "pow-series";
 NC_TANGENT_OGIVE         = "tan-ogive";
 NC_BLUNTED_TANGENT_OGIVE = "blunt-tan-ogive";
+NC_BLUNTED_SECANT_OGIVE  = "blunt-sec-ogive";
 NC_SECANT_OGIVE          = "sec-ogive";
 NC_HAACK                 = "haack";
 
@@ -62,16 +63,17 @@ module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2) {
 function nc_plug(bt, wall_d=1, tol=0.25) =
   let (plug_od = bt[BT_INNER] - 2*tol,
        plug_id = plug_od - 2*wall_d)
-  [bt[BT_LABEL] + " Plug", plug_id, plug_od];
+  [str(bt[BT_LABEL], " Plug"), plug_id, plug_od];
 
 module nc_nosecone(type, bt, h,
-                   b=-1,               // Blunted Conic and Blunted Tangent Ogive parameters
+                   b=-1,               // Blunted Conic, Tangent Ogive, and Secant Ogive parameter
                    d2=-1, h2=-1,       // Biconic parameters
                    power=0.25,         // Power Series parameters
                    k=0.75,             // Parabolic parameters
                    c=0,                // Sears-Haack parameters
                    rho=-1,             // Secant Ogive parameters
                    anchor=NC_ANCHOR_BAR, bar=3, tab=[3, 3, 3], buffer=2, hole=2,
+                   sidecut=0,
                    plug=-1,
                    wall=1,
                    tol=0.25) {
@@ -91,7 +93,7 @@ module nc_nosecone(type, bt, h,
   d2_ = (d2 <= 0) ? 2*bt_od/3 : d2;
   h2_ = (h2 <= 0) ? 2*h/3 : h2;
 
-  // Values for blunted conic and blunted tangent ogive
+  // Values for blunted conic, tangent ogive, and secant ogive
   b_ = (b > 0) ? b : bt_od/3;
 
   // Values for secant ogive
@@ -100,42 +102,58 @@ module nc_nosecone(type, bt, h,
   // Generate
   echo("Nosecone", type=type, bt=bt, h=h,
        plug=plug_h, plug_od=plug_od, plug_id=plug_id,
-       anchor=anchor_type, wall=wall_d);
+       anchor=anchor_type,
+       wall=wall_d,
+       tol=tol,
+       rho=rho_);
 
   difference() {
 
     // Generate the bulb shape and the plug/shoulder
-    union() {
-      // Bulb
-      if (type == NC_ELLIPSOID) {
-        s_ellipsoid(bt_od, h);
-      } else if (type == NC_CONIC) {
-        cylinder(d1=bt_od, d2=0, h=h);
-      } else if (type == NC_BICONIC) {
+    difference() {
+      union() {
+        // Bulb
+        if (type == NC_ELLIPSOID) {
+          s_ellipsoid(bt_od, h);
+        } else if (type == NC_CONIC) {
+          cylinder(d1=bt_od, d2=0, h=h);
+        } else if (type == NC_BICONIC) {
           translate([0, 0, h2_])
             cylinder(d1=d2_, d2=0, h=h-h2_);
-        cylinder(d1=bt_od, d2=d2_, h=h2_);
-      } else if (type == NC_BLUNTED_CONIC) {
-        s_blunted_conic(bt_od, h, b_);
-      } else if (type == NC_PARABOLIC) {
-        s_parabolic(bt_od, h, k);
-      } else if (type == NC_POWER_SERIES) {
-        s_power_series(bt_od, h, power);
-      } else if (type == NC_TANGENT_OGIVE) {
-        s_tangent_ogive(bt_od, h);
-      } else if (type == NC_BLUNTED_TANGENT_OGIVE) {
-        s_blunted_tangent_ogive(bt_od, h, b_);
-      } else if (type == NC_SECANT_OGIVE) {
-        s_secant_ogive(bt_od, h, rho_);
-      } else if (type == NC_HAACK) {
-        s_haack(bt_od, h, c);
+          cylinder(d1=bt_od, d2=d2_, h=h2_);
+        } else if (type == NC_BLUNTED_CONIC) {
+          s_blunted_conic(bt_od, h, b_);
+        } else if (type == NC_PARABOLIC) {
+          s_parabolic(bt_od, h, k);
+        } else if (type == NC_POWER_SERIES) {
+          s_power_series(bt_od, h, power);
+        } else if (type == NC_TANGENT_OGIVE) {
+          s_tangent_ogive(bt_od, h);
+        } else if (type == NC_BLUNTED_TANGENT_OGIVE) {
+          s_blunted_tangent_ogive(bt_od, h, b_);
+        } else if (type == NC_SECANT_OGIVE) {
+          s_secant_ogive(bt_od, h, rho_);
+        } else if (type == NC_BLUNTED_SECANT_OGIVE) {
+          s_blunted_secant_ogive(bt_od, h, rho_, b_);
+        } else if (type == NC_HAACK) {
+          s_haack(bt_od, h, c);
+        }
+
+        // Plug/shoulder
+        translate([0, 0, -plug_h])
+          cylinder(d=plug_od, h=plug_h);
       }
 
-      // Plug/shoulder
-      translate([0, 0, -plug_h])
-        cylinder(d=plug_od, h=plug_h);
+      // Side cut to make it easier to run string across bar
+      if (bar && sidecut) {
+        translate([-sidecut/2, -bt_od/2-1, -plug_h-1])
+          cube([sidecut, bt_od+2, bar+sidecut/2+1]);
+        translate([0, bt_od/2+1, -plug_h+bar+sidecut/2]) {
+          rotate([90, 0, 0])
+            cylinder(d=sidecut, h=bt_od+2);
+        }
+      }
     }
-
     // Subtract the interior of the bulb and plug/shoulder unless solid
     if (wall_d > 0)
       union() {
@@ -166,6 +184,8 @@ module nc_nosecone(type, bt, h,
             s_blunted_tangent_ogive(bt_od-wall_d*2, h-wall_d, b_);
           } else if (type == NC_SECANT_OGIVE) {
             s_secant_ogive(bt_od-wall_d*2, h-wall_d, rho_);
+          } else if (type == NC_BLUNTED_SECANT_OGIVE) {
+            s_blunted_secant_ogive(bt_od-wall_d*2, h-wall_d, rho_, b_);
           } else if (type == NC_HAACK) {
             s_haack(bt_od-wall_d*2, h-wall_d, c);
           }
