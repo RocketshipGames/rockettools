@@ -13,10 +13,13 @@ module s_right_triangle(t) {
 }
 
 module s_hollow_cylinder(od, id, h) {
+  od_ = max(od, id);
+  id_ = min(od, id);
+
   difference() {
-    cylinder(d=od, h=h);
+    cylinder(d=od_, h=h);
     translate([0, 0, -1])
-      cylinder(d=id, h=h+2);
+      cylinder(d=id_, h=h+2);
   }
 }
 
@@ -288,5 +291,6 @@ module s_blunted_secant_ogive(d, h, rho, b, f=$fn) {
 
   translate([0, 0, h-zx])
     sphere(d=kd);
+  echo("Tip", h-zx+kd/2);
 
 }

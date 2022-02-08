@@ -72,6 +72,7 @@ module nc_nosecone(type, bt, h,
                    k=0.75,             // Parabolic parameters
                    c=0,                // Sears-Haack parameters
                    rho=-1,             // Secant Ogive parameters
+                   alpha=-1,           // Secant Ogive parameters
                    anchor=NC_ANCHOR_BAR, bar=3, tab=[3, 3, 3], buffer=2, hole=2,
                    sidecut=0,
                    plug=-1,
@@ -97,7 +98,12 @@ module nc_nosecone(type, bt, h,
   b_ = (b > 0) ? b : bt_od/3;
 
   // Values for secant ogive
-  rho_ = (rho < 0) ? ((h/2)+((pow(bt_od/2, 2)+pow(h, 2))/bt_od))/2 : rho;
+  rho_t = (pow(bt_od/2, 2) + pow(h, 2)) / bt_od;   // rho for tangent ogive
+  rho_ = (rho <= 0)
+    ? ((alpha <= 0)
+       ? ((h/2)+((pow(bt_od/2, 2)+pow(h, 2))/bt_od))/2 // default secant ogive rho
+       : (rho_t / alpha))
+    : rho;
 
   // Generate
   echo("Nosecone", type=type, bt=bt, h=h,
