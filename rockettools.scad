@@ -1,5 +1,6 @@
 
 $fn = $preview ? 30 : 120;
+$tol = 0.25;
 
 include <lib/units.scad>
 include <lib/shapes.scad>

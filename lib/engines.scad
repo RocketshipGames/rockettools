@@ -3,9 +3,10 @@
 include <shapes.scad>
 include <bodytubes.scad>
 
-E_LABEL = 0;
+E_LABEL  = 0;
 E_OUTER  = 1;
-E_LEN   = 2;
+E_LEN    = 2;
+E_LENGTH = 2;
 
 //        Name    D   Len
 e_6mm  = [ "6mm",  6.3, 26]; // "MicroMaxx"
