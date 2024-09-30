@@ -23,13 +23,28 @@ module s_hollow_cylinder(od, id, h) {
   }
 }
 
+module s_u_full(od, h, l=0) {
+  lo = od/2 + l;
+  cylinder(d=od, h=h);
+  translate([-lo, -od/2, 0])
+    cube([lo, od, h]);
+}
+
+module s_u(od, id, h, l=0) {
+  difference() {
+    s_u_full(od, h, l);
+    translate([0, 0, -1])
+      s_u_full(id, h+2, l+(od-id)/2+1);
+  }
+}
+
 // Elliptical revolution
-module s_ellipsoid(d, h) {
+module s_ellipsoid(d, h, fn=$fn) {
   rotate_extrude() {
     intersection() {
       rotate([0, 0, 90])
         resize([h*2, d])
-        circle(d=20);
+        circle(d=20, $fn=fn);
 
       square([d+1, h+1]);
     }

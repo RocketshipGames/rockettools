@@ -109,3 +109,29 @@ module ll_padded(bt, rod, h=10, pad=4, wall=0.5, wall2=-1, tol=0.25, rod_tol=-1)
         }
   }
 }
+
+
+module ll_integral_launch_lug(bt, lug_id, lug_h, lug_od=0, shell=0.5) {
+
+  od = (lug_od <= 0) ? lug_id + shell*2 : lug_od;
+  sh = (od-lug_id)/2;
+
+  translate([bt[BT_OUTER]/2+od/2, 0, 0])
+    difference() {
+      s_hollow_cylinder(od=od, id=lug_id, h=lug_h);
+      translate([-od-1, -od/2-1, -1])
+        cube([od+1, od+2, lug_h+2]);
+    }
+
+  difference() {
+    for (y = [od/2-sh, -od/2]) {
+      translate([0, y, 0])
+        cube([bt[BT_OUTER]/2+od/2, sh, lug_h]);
+    }
+
+    translate([0, 0, -1])
+      cylinder(d=bt[BT_INNER], h=lug_h+2);
+  }
+
+  // end ll_integral_launch_lug
+}

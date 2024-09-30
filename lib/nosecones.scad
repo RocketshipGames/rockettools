@@ -2,6 +2,7 @@ include <shapes.scad>
 include <bodytubes.scad>
 
 use <scad-utils/transformations.scad>
+use <list-comprehension-demos/skin.scad>
 
 NC_CONIC                 = "conic";
 NC_BICONIC               = "biconic";
@@ -14,6 +15,7 @@ NC_BLUNTED_TANGENT_OGIVE = "blunt-tan-ogive";
 NC_BLUNTED_SECANT_OGIVE  = "blunt-sec-ogive";
 NC_SECANT_OGIVE          = "sec-ogive";
 NC_HAACK                 = "haack";
+NC_SHOULDER_ONLY         = "shoulder";
 
 NC_ANCHOR_NONE     = "none";
 NC_ANCHOR_SHELL    = "shell";
@@ -24,7 +26,7 @@ NC_ANCHOR_TAB      = "tab";
 NC_ANCHOR_SIDE     = "side";
 NC_ANCHOR_EYELET   = "eyelet";
 
-module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thickness=2) {
+module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thickness=2, wall=1) {
   if (type == NC_ANCHOR_BAR) {
     translate([0, 0, bar/2-plug])
       union() {
@@ -191,7 +193,7 @@ module nc_nosecone(type, bt, h,
   wall_d = (wall > 0 && anchor != NC_ANCHOR_SOLID) ? wall : 0;
   anchor_type = (wall_d > 0) ? anchor : NC_ANCHOR_SOLID;
 
-  plug_h = (plug==-1) ? floor(bt_od/2) : plug;
+  plug_h = (plug==-1) ? floor(2*bt_od/3) : plug;
   plug_bt = nc_plug(bt, wall_d, tol);
   plug_id = plug_bt[BT_INNER];
   plug_od = plug_bt[BT_OUTER];
@@ -227,7 +229,7 @@ module nc_nosecone(type, bt, h,
       union() {
         // Bulb
         if (type == NC_ELLIPSOID) {
-          s_ellipsoid(bt_od, h);
+          s_ellipsoid(bt_od, h, fn=fn);
         } else if (type == NC_CONIC) {
           cylinder(d1=bt_od, d2=0, h=h);
         } else if (type == NC_BICONIC) {
@@ -253,25 +255,39 @@ module nc_nosecone(type, bt, h,
         }
 
         // Plug/shoulder
-        translate([0, 0, -plug_h])
-          cylinder(d=plug_od, h=plug_h);
+        if (plug_h > 0)
+          translate([0, 0, -plug_h])
+            cylinder(d=plug_od, h=plug_h);
       }
 
       // Side cut to make it easier to run string across bar
-      if (bar && sidecut) {
+      if (plug_h > 0 && bar && sidecut) {
         translate([-sidecut/2, -bt_od/2-1, -plug_h-1])
           cube([sidecut, bt_od+2, bar+sidecut/2+1]);
         translate([0, bt_od/2+1, -plug_h+bar+sidecut/2]) {
           rotate([90, 0, 0])
             cylinder(d=sidecut, h=bt_od+2);
         }
+        // Round the bottom corners
+        translate([-sidecut/2-1, -bt_od/2-1, -plug_h-1]) {
+          difference() {
+            cube([sidecut+2, bt_od+2, 2]);
+            translate([0, bt_od+2, 2])
+              rotate([90, 0, 0])
+              cylinder(d=2, h=bt_od+2);
+            translate([sidecut+2, bt_od+2, 2])
+              rotate([90, 0, 0])
+              cylinder(d=2, h=bt_od+2);
+          }
+        }
       }
     }
+
     // Subtract the interior of the bulb and plug/shoulder unless solid
     if (wall_d > 0)
       union() {
         // Plug/shoulder interior, if not filled
-        if (anchor_type != NC_ANCHOR_SOLID && anchor_type != NC_ANCHOR_PLUGGED)
+        if (plug_h > 0 && anchor_type != NC_ANCHOR_SOLID && anchor_type != NC_ANCHOR_PLUGGED)
           translate([0, 0, -(plug_h+1)])
             cylinder(d=plug_id, h=plug_h+2);
 
@@ -304,23 +320,25 @@ module nc_nosecone(type, bt, h,
           }
 
           translate([0, 0, -1])
-            cylinder(d=plug_id, h=h+1.01);
+            cylinder(d=(plug_h > 0) ? plug_id : bt_od-wall_d*2, h=h+1.01);
         }
       }
   }
 
   // Add the anchor, if any
-  nc_anchor(anchor_type, plug_od, plug_id, plug_h,
-            bar=bar,
-            tab=tab,
-            buffer=buffer,
-            hole=hole,
-            thickness=thickness);
+  if (plug_h > 0)
+    nc_anchor(anchor_type, plug_od, plug_id, plug_h,
+              bar=bar,
+              tab=tab,
+              buffer=buffer,
+              hole=hole,
+              thickness=thickness,
+              wall=wall);
 
 }
 
 
-function nc_stack(a, b, z, t) =
+function nc_zipper(a, b, z, t) =
   let (
        steps = max(len(a), len(b), len(z), len(t)) - 1
        )
