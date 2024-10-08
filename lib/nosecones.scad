@@ -204,8 +204,7 @@ module nc_nosecone(type, bt, h,
                    power=0.25,         // Power Series parameters
                    k=0.75,             // Parabolic parameters
                    c=0,                // Sears-Haack parameters
-                   rho=-1,             // Secant Ogive parameters
-                   alpha=-1,           // Secant Ogive parameters
+                   alpha=-1, rho=-1,   // Secant Ogive parameters
                    anchor=NC_ANCHOR_BAR, bar=3, tab=[3, 3, 3], buffer=2, hole=2, thickness=2,
                    sidecut=0,
                    plug=-1,
