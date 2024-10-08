@@ -25,6 +25,7 @@ NC_ANCHOR_BAR      = "bar";
 NC_ANCHOR_TAB      = "tab";
 NC_ANCHOR_SIDE     = "side";
 NC_ANCHOR_EYELET   = "eyelet";
+NC_ANCHOR_DROPBAR  = "dropbar";
 
 module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thickness=2, wall=1) {
   if (type == NC_ANCHOR_BAR) {
@@ -35,6 +36,7 @@ module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thi
         translate([0, 0, -bar/4])
           cube([(od+id)/2, bar, bar/2], center=true);
       }
+
   } else if (type == NC_ANCHOR_TAB) {
     l = tab[0];
     w = tab[1];
@@ -50,6 +52,7 @@ module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thi
         translate([l-hole/2-(w-hole)/2, w/2, -1])
           cylinder(d=hole, h=h+2);
       }
+
   } else if (type == NC_ANCHOR_SIDE) {
     intersection() {
       translate([0, 0, -plug-1])
@@ -62,11 +65,34 @@ module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thi
             cylinder(d=hole, h=bar+2);
         }
     }
+
   } else if (type == NC_ANCHOR_EYELET) {
     translate([0, 0, -plug])
       eyelet(od, id, wall, thickness, hole);
+
+  } else if (type == NC_ANCHOR_DROPBAR) {
+    translate([0, 0, -plug-bar-hole]) {
+      intersection() {
+        difference() {
+          cylinder(d=od, h=bar+hole+1);
+          translate([0, 0, -1])
+            cylinder(d=id, h=bar+hole+3);
+        }
+        translate([-od/2-1, -bar/2, -1])
+          cube([od+2, bar, bar+hole+3]);
+      }
+
+      union() {
+        translate([-id/2, 0, bar/2])
+          rotate([0, 90, 0])
+          cylinder(h=id, d=bar);
+        translate([-id/2, -bar/2, 0])
+          cube([id, bar, bar/2]);
+      }
+    }
   }
 
+  // end nc_anchor
 }
 
 module eyelet(od, id, wall=1, thickness=2, hole=3) {
