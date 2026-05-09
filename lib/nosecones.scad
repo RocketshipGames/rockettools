@@ -25,9 +25,11 @@ NC_ANCHOR_BAR      = "bar";
 NC_ANCHOR_TAB      = "tab";
 NC_ANCHOR_SIDE     = "side";
 NC_ANCHOR_EYELET   = "eyelet";
+NC_ANCHOR_INNEREYE = "innereye";
 NC_ANCHOR_DROPBAR  = "dropbar";
 
-module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thickness=2, wall=1) {
+module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thickness=2, ring=-1, wall=1, n=1) {
+
   if (type == NC_ANCHOR_BAR) {
     translate([0, 0, bar/2-plug])
       union() {
@@ -67,8 +69,16 @@ module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thi
     }
 
   } else if (type == NC_ANCHOR_EYELET) {
-    translate([0, 0, -plug])
-      eyelet(od, id, wall, thickness, hole);
+    for (a = [0 : 1 : n])
+      rotate((360/n)*a)
+        translate([0, 0, -plug])
+        eyelet(od, id, wall, thickness, hole, ring);
+
+  } else if (type == NC_ANCHOR_INNEREYE) {
+    for (a = [0 : 1 : n])
+      rotate((360/n)*a)
+        translate([0, 0, -plug])
+        inner_eyelet(od, id, wall, thickness, hole, ring);
 
   } else if (type == NC_ANCHOR_DROPBAR) {
     translate([0, 0, -plug-bar-hole]) {
@@ -95,8 +105,9 @@ module nc_anchor(type, od, id, plug, bar=3, tab=[3, 3, 2], buffer=2, hole=2, thi
   // end nc_anchor
 }
 
-module eyelet(od, id, wall=1, thickness=2, hole=3) {
-  ring_d = hole+thickness*2;
+module eyelet(od, id, wall=1, thickness=2, hole=3, ring=-1) {
+
+  ring_d = hole+((ring > 0) ? ring : thickness)*2;
   fillet = thickness/2;
 
   module ring_block() {
@@ -193,6 +204,204 @@ module eyelet(od, id, wall=1, thickness=2, hole=3) {
 
 }
 
+module inner_eyelet(od, id, wall=1, thickness=2, hole=3, ring=-1) {
+
+  _ring = tj_tap("inner eyelet ring", (ring <= 0) ? wall : ring);
+
+  x_outer = od/2;
+  x_inner = id/2;
+  y = thickness/2;
+
+  x_corner = sqrt(x_inner^2 - y^2);
+
+  x_left = x_corner - hole - _ring;
+
+  /*
+  color(RED)
+  translate([x_corner, y, 0])
+    sphere(d=0.5);
+  */
+
+  d = _ring*2+hole;
+  shift = _ring/2;
+  f = (x_inner-(x_corner-hole/2-shift))*2;
+
+  intersection() {
+    difference() {
+      union() {
+        translate([x_left+hole/2+shift, -y, 0])
+        cube([(x_inner+$tol)-(x_left+hole/2+shift), thickness, d+f/2]);
+
+        translate([x_corner-hole/2-_ring/2, thickness/2, _ring+hole/2])
+        rotate([90, 0, 0])
+        cylinder(d=d, h=thickness);
+      }
+
+      translate([x_corner-hole/2-shift, thickness/2+1, _ring+hole/2])
+        rotate([90, 0, 0])
+        cylinder(d=hole, h=thickness+2);
+
+      translate([x_inner-f/2, thickness/2+1, d+f/2])
+      rotate([90, 0, 0])
+        cylinder(d=f, h=thickness+2);
+    }
+
+    translate([0, 0, -1])
+      cylinder(d=od, h=d+f+2);
+  }
+
+  /*
+  intersection() {
+    translate([od/2-hole/2-wall, 0, d/2])
+      difference() {
+      union() {
+        translate([0, thickness/2, 0])
+        rotate([90, 0, 0])
+        cylinder(d=d, h=thickness);
+
+        difference() {
+          translate([0, -thickness/2, -d/2])
+            cube([d/2, thickness, d+hole/2]);
+
+          #translate([0, thickness/2+1, d/2+hole/2])
+            rotate([90, 0, 0])
+            cylinder(d=hole, h=thickness+2);
+        }
+      }
+      translate([0, thickness/2+1, 0])
+        rotate([90, 0, 0])
+        cylinder(d=hole, h=thickness+2);
+    }
+
+  }
+  */
+
+  /*
+  ring_d = hole+((ring > 0) ? ring : thickness)*2;
+  fillet = thickness/2;
+
+  difference() {
+    union() {
+      translate([0, thickness/2, 0])
+      rotate([90, 0, 0])
+      cylinder(d=ring_d, h=thickness);
+
+      difference() {
+        translate([0, -thickness/2, 0])
+          cube([ring_d/2, thickness, ring_d/2+wall]);
+
+        translate([0, thickness/2+1, ring_d/2-wall/2])
+          rotate([90, 0, 0])
+          #cylinder(d=(ring_d/2+wall), h=thickness+2);
+            }
+
+    }
+
+
+      translate([0, thickness/2+1, 0])
+      #rotate([90, 0, 0])
+      #cylinder(d=hole, h=thickness+2);
+      }
+
+  module ring_block() {
+    translate([od/2-ring_d/2, 0, -hole/2])
+      rotate([90, 0, 0])
+      linear_extrude(thickness, center=true)
+      difference() {
+        union() {
+          circle(d=ring_d);
+          square([ring_d/2, ring_d-wall]);
+        }
+        circle(d=hole);
+      }
+}
+  */
+
+  /*
+  module fillet() {
+    function wall_fillet(od, id, oy, iy, f, precision=4) =
+      let (
+           or = (od/2),
+           ir = (id/2),
+
+           a1 = asin(oy/or),
+           a2 = asin(oy/ir),
+
+           a3 = asin(iy/ir)
+           )
+      [
+       for (a = [-a1:a1/precision:a1])
+         [cos(a)*or, sin(a)*or],
+           for (a = [a2:-(a2-a3)/precision:a3])
+             [cos(a)*ir, sin(a)*ir],
+               let (
+                    cx = cos(a3)*ir-f,
+                    cy = sin(a3)*ir
+                    )
+               for (a=[0:-90/precision:-90])
+                 [cx+cos(a)*f, cy+sin(a)*f],
+
+                   let (
+                        cx = cos(a3)*ir-f,
+                        a4 = asin((iy/2)/cx),
+                        r = sqrt(cx^2 + (iy/2)^2)
+                        )
+                   for (a = [a4:-a4*2/precision:-a4])
+                     [cos(a)*r, sin(a)*r],
+                       let (
+                            cx = cos(a3)*ir-f,
+                            cy = -sin(a3)*ir
+                            )
+                       for (a=[90:-90/precision:0])
+                         [cx+cos(a)*f, cy+sin(a)*f],
+                           for (a = [-a3:-(a2-a3)/precision:-a2])
+                             [cos(a)*ir, sin(a)*ir],
+       ];
+
+    function f(t) = wall_fillet(od, id, thickness/2+(fillet*t), thickness/2+(fillet*t), fillet*t, precision=8);
+
+    /*
+    for (t=[0:.1:1])
+      let (tt = 1-sqrt(fillet-t^2))
+        translate([0, 0, fillet*t-fillet])
+        outline(f(tt), d=0.25);
+    * /
+
+    skin([for (t=[0.1:0.05:1])
+             let (tt = 1-sqrt(fillet-t^2))
+               transform(translation([0, 0, fillet*t-fillet]), f(tt))
+          ]);
+
+    skin([for (t=[0,1])
+             transform(translation([0, 0, thickness*t]), f(1)) ]);
+
+    k = (ring_d-wall)/2;
+    translate([0, 0, thickness])
+      mirror([0, 0, 1])
+      skin([for (t=[0.1:0.05:1])
+               let (tt = 1-sqrt(fillet-t^2))
+                 transform(translation([0, 0, k*t-k]), f(tt))
+            ]);
+
+  }
+*/
+  /*
+    intersection() {
+      difference() {
+        ring_block();
+        translate([od/2-ring_d/2, thickness/2+fillet/2+0.5, ring_d-wall-hole/2])
+          rotate([90, 0, 0])
+          cylinder(d=(ring_d/2-wall)*2, h=thickness+fillet+1);
+      }
+      cylinder(d=od, h=ring_d*2, center=true);
+    }
+  */
+
+  //  fillet();
+
+  // inner_eyelet
+}
+
 function nc_plug(bt, wall=1, tol=0.1875) =
   let (plug_od = bt[BT_INNER] - 2*tol,
        plug_id = plug_od - 2*wall)
@@ -205,7 +414,9 @@ module nc_nosecone(type, bt, h,
                    k=0.75,             // Parabolic parameters
                    c=0,                // Sears-Haack parameters
                    alpha=-1, rho=-1,   // Secant Ogive parameters
+                   n=1,                // Context-dependent count (e.g., eyelets)
                    anchor=NC_ANCHOR_BAR, bar=3, tab=[3, 3, 3], buffer=2, hole=2, thickness=2,
+                   ring=-1,
                    sidecut=0,
                    plug=-1,
                    wall=1,
@@ -245,6 +456,7 @@ module nc_nosecone(type, bt, h,
        wall=wall_d,
        tol=tol,
        rho=rho_,
+       thickness=thickness, hole=hole, ring=ring, n=n,
        fn=fn);
 
   difference() {
@@ -357,8 +569,10 @@ module nc_nosecone(type, bt, h,
               tab=tab,
               buffer=buffer,
               hole=hole,
+              ring=ring,
               thickness=thickness,
-              wall=wall);
+              wall=wall,
+              n=n);
 
 }
 
